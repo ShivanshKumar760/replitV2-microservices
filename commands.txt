@@ -1,0 +1,13 @@
+docker exec -it repl-02b58ead-de06-440f-9eee-88abd661d9ae bash
+docker logs repl-02b58ead-de06-440f-9eee-88abd661d9ae
+npm ERR! code ENOENT
+npm ERR! syscall open
+npm ERR! path /workspace/package.json
+npm ERR! errno -2
+npm ERR! enoent ENOENT: no such file or directory, open '/workspace/package.json'
+npm ERR! enoent This is related to npm not being able to find a file.
+npm ERR! enoent
+
+
+>docker inspect  repl-02b58ead-de06-440f-9eee-88abd661d9ae |grep WorkingDir
+            "WorkingDir": "/workspaces/02b58ead-de06-440f-9eee-88abd661d9ae",

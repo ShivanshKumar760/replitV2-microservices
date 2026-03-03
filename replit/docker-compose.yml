@@ -1,0 +1,78 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: repl
+      POSTGRES_PASSWORD: repl
+      POSTGRES_DB: replit
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repl -d replit"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./auth-service/dockerfile
+    ports:
+      - "3001:3001"
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  project-service:
+    build:
+      context: .
+      dockerfile: ./project-service/dockerfile
+    ports:
+      - "3002:3002"
+    env_file: .env
+    volumes:
+      - ./workspaces:/workspaces
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  execution-service:
+    build:
+      context: .
+      dockerfile: ./execution-service/dockerfile
+    ports:
+      - "3003:3003"
+      - "4000:4000"
+    env_file: .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # ✅ add this
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  sandbox-worker:
+    container_name: sandbox-worker
+    build:
+      context: .
+      dockerfile: ./sandbox-worker/dockerfile
+    env_file: .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./workspaces:/workspaces
+    depends_on:
+      rabbitmq:
+        condition: service_healthy

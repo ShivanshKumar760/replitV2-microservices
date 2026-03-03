@@ -1,0 +1,13 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY auth-service/package.json ./
+RUN npm install
+
+COPY auth-service/index.js ./
+COPY shared ./shared
+
+EXPOSE 3001
+
+CMD ["node", "index.js"]

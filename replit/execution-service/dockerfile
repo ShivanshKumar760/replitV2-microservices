@@ -1,0 +1,14 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY execution-service/package.json ./
+RUN npm install
+
+COPY execution-service/index.js ./
+COPY shared ./shared
+
+EXPOSE 3003
+EXPOSE 4000
+
+CMD ["node", "index.js"]

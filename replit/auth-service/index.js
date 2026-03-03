@@ -2,8 +2,8 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import { pool } from "../shared/db.js";
-import { generateToken } from "../shared/jwt.js";
+import { pool } from "./shared/db.js";
+import { generateToken } from "./shared/jwt.js";
 
 dotenv.config();
 
@@ -75,7 +75,7 @@ app.post("/login", async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
-    const token = signToken({ id: user.id });
+    const token = generateToken({ id: user.id });
     res.json({ token });
   } catch (err) {
     console.error("Error logging in user", err);

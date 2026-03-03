@@ -1,0 +1,13 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY project-service/package.json ./
+RUN npm install
+
+COPY project-service/index.js ./
+COPY shared ./shared
+
+EXPOSE 3002
+
+CMD ["node", "index.js"]

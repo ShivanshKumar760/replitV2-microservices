@@ -2,8 +2,8 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import { v4 as uuid } from "uuid";
-import { pool } from "../shared/db.js";
-import { authMiddleware } from "../shared/authMiddleware.js";
+import { pool } from "./shared/db.js";
+import { authMiddleware } from "./shared/authMiddleware.js";
 import dotenv from "dotenv";
 dotenv.config();
 

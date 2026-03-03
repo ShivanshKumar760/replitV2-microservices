@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Replit Clone — Docker Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0e1a;
+    color: #e2e8f0;
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    padding: 40px 20px;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #38bdf8, #818cf8, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #64748b;
+    font-size: 0.75rem;
+    margin-bottom: 48px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .diagram {
+    max-width: 1100px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* LAYERS */
+  .layer {
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .layer-label {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .layer-client { background: #0f172a; border: 1px solid #1e293b; }
+  .layer-compose { background: #0d1117; border: 1px solid #1e3a5f; }
+  .layer-infra   { background: #0d1117; border: 1px solid #1a2e1a; }
+  .layer-sandbox { background: #0d1117; border: 1px solid #2e1a2e; }
+
+  /* BOXES */
+  .boxes {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .box {
+    border-radius: 12px;
+    padding: 14px 18px;
+    flex: 1;
+    min-width: 160px;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+  }
+
+  .box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+
+  .box-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .box-port {
+    font-size: 0.65rem;
+    opacity: 0.6;
+    margin-bottom: 8px;
+  }
+
+  .box-desc {
+    font-size: 0.65rem;
+    opacity: 0.7;
+    line-height: 1.5;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.55rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 6px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* Color themes per service */
+  .box-client    { background: #1e293b; border: 1px solid #334155; }
+  .box-auth      { background: #1a1a2e; border: 1px solid #4f46e5; }
+  .box-project   { background: #1a1a2e; border: 1px solid #0ea5e9; }
+  .box-execution { background: #1a1a2e; border: 1px solid #f59e0b; }
+  .box-sandbox   { background: #1a1a2e; border: 1px solid #10b981; }
+  .box-postgres  { background: #1a2535; border: 1px solid #0ea5e9; }
+  .box-rabbit    { background: #2a1a1a; border: 1px solid #f97316; }
+  .box-container { background: #1a2a1a; border: 1px solid #22c55e; }
+  .box-docker    { background: #111827; border: 1px solid #6b7280; }
+
+  .tag-rest   { background: #4f46e520; color: #818cf8; border: 1px solid #4f46e540; }
+  .tag-ws     { background: #f59e0b20; color: #fbbf24; border: 1px solid #f59e0b40; }
+  .tag-amqp   { background: #f9731620; color: #fb923c; border: 1px solid #f9731640; }
+  .tag-sql    { background: #0ea5e920; color: #38bdf8; border: 1px solid #0ea5e940; }
+  .tag-docker { background: #22c55e20; color: #4ade80; border: 1px solid #22c55e40; }
+  .tag-sock   { background: #6b728020; color: #9ca3af; border: 1px solid #6b728040; }
+
+  /* ARROWS */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 0;
+    font-size: 0.7rem;
+    color: #475569;
+  }
+
+  .arrow { color: #334155; font-size: 1.2rem; }
+  .flow-label {
+    background: #1e293b;
+    border: 1px solid #334155;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    color: #64748b;
+  }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #1e293b;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.65rem;
+    color: #64748b;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+
+  /* VOLUME MOUNT CALLOUT */
+  .callout {
+    background: #0f1f0f;
+    border: 1px dashed #166534;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-top: 12px;
+    font-size: 0.68rem;
+    color: #4ade80;
+    line-height: 1.7;
+  }
+
+  .callout-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.7rem;
+    color: #86efac;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* CONNECTION LINES SVG */
+  .connections {
+    position: relative;
+  }
+
+  .conn-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin: 6px 0;
+    font-size: 0.65rem;
+    flex-wrap: wrap;
+  }
+
+  .conn-box {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    white-space: nowrap;
+  }
+
+  .conn-arrow {
+    color: #475569;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .conn-label {
+    font-size: 0.6rem;
+    color: #64748b;
+    font-style: italic;
+  }
+
+  /* Step-by-step flow */
+  .flow-steps {
+    max-width: 1100px;
+    margin: 32px auto 0;
+  }
+
+  .flow-steps h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #94a3b8;
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .steps {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 12px;
+  }
+
+  .step {
+    flex-shrink: 0;
+    width: 160px;
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 10px;
+    padding: 14px;
+    position: relative;
+  }
+
+  .step + .step {
+    margin-left: -1px;
+    border-left: 1px dashed #334155;
+  }
+
+  .step-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #1e293b;
+    position: absolute;
+    top: 8px;
+    right: 10px;
+  }
+
+  .step-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 6px;
+  }
+
+  .step-desc {
+    font-size: 0.62rem;
+    color: #64748b;
+    line-height: 1.5;
+  }
+
+  .step-badge {
+    display: inline-block;
+    font-size: 0.55rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 8px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Replit Clone — Docker Architecture</h1>
+<p class="subtitle">Microservices · RabbitMQ · Docker-in-Docker · WebSocket Terminal</p>
+
+<div class="diagram">
+
+  <!-- CLIENT LAYER -->
+  <div class="layer layer-client">
+    <div class="layer-label">① Client / Developer</div>
+    <div class="boxes">
+      <div class="box box-client" style="max-width:220px">
+        <div class="box-name">HTTP Client</div>
+        <div class="box-port">Postman / curl / Browser</div>
+        <div class="box-desc">Sends REST requests and opens WebSocket connections</div>
+        <span class="tag tag-rest">REST</span>
+        <span class="tag tag-ws">WS</span>
+      </div>
+      <div class="box box-client" style="max-width:220px">
+        <div class="box-name">wscat / Terminal</div>
+        <div class="box-port">ws://localhost:4000</div>
+        <div class="box-desc">Interactive shell access to running sandbox containers</div>
+        <span class="tag tag-ws">WebSocket</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow">
+    <span class="arrow">↓</span>
+    <span class="flow-label">HTTP :3001 / :3002 / :3003 &nbsp;·&nbsp; WS :4000</span>
+    <span class="arrow">↓</span>
+  </div>
+
+  <!-- DOCKER COMPOSE SERVICES -->
+  <div class="layer layer-compose">
+    <div class="layer-label">② Docker Compose Services (docker network: replit_default)</div>
+    <div class="boxes">
+
+      <div class="box box-auth">
+        <div class="box-name">auth-service</div>
+        <div class="box-port">:3001</div>
+        <div class="box-desc">Register / Login<br>Issues JWT tokens</div>
+        <span class="tag tag-rest">REST</span>
+        <span class="tag tag-sql">PostgreSQL</span>
+      </div>
+
+      <div class="box box-project">
+        <div class="box-name">project-service</div>
+        <div class="box-port">:3002</div>
+        <div class="box-desc">Creates projects<br>Scaffolds index.js + package.json into /workspaces/&lt;id&gt;</div>
+        <span class="tag tag-rest">REST</span>
+        <span class="tag tag-sql">PostgreSQL</span>
+        <span class="tag tag-docker">volume mount</span>
+      </div>
+
+      <div class="box box-execution">
+        <div class="box-name">execution-service</div>
+        <div class="box-port">:3003 · :4000</div>
+        <div class="box-desc">Queues run jobs via RabbitMQ<br>WebSocket → container exec shell</div>
+        <span class="tag tag-amqp">AMQP</span>
+        <span class="tag tag-ws">WebSocket</span>
+        <span class="tag tag-sock">docker.sock</span>
+      </div>
+
+      <div class="box box-sandbox">
+        <div class="box-name">sandbox-worker</div>
+        <div class="box-port">internal</div>
+        <div class="box-desc">Consumes queue<br>Spawns mini-replit-node containers via Docker CLI</div>
+        <span class="tag tag-amqp">AMQP</span>
+        <span class="tag tag-docker">DinD</span>
+        <span class="tag tag-sock">docker.sock</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="flow">
+    <span class="arrow">↓</span>
+    <span class="flow-label">depends_on (healthcheck) &nbsp;·&nbsp; shared docker network</span>
+    <span class="arrow">↓</span>
+  </div>
+
+  <!-- INFRASTRUCTURE -->
+  <div class="layer layer-infra">
+    <div class="layer-label">③ Infrastructure Containers</div>
+    <div class="boxes">
+      <div class="box box-postgres">
+        <div class="box-name">postgres:15</div>
+        <div class="box-port">:5432</div>
+        <div class="box-desc">Users table<br>Projects table<br>Healthcheck: pg_isready</div>
+        <span class="tag tag-sql">SQL</span>
+      </div>
+      <div class="box box-rabbit">
+        <div class="box-name">rabbitmq:3</div>
+        <div class="box-port">:5672 · :15672</div>
+        <div class="box-desc">"execution" queue<br>execution-service → sandbox-worker<br>Healthcheck: diagnostics ping</div>
+        <span class="tag tag-amqp">AMQP</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow">
+    <span class="arrow">↓</span>
+    <span class="flow-label">docker run --volumes-from sandbox-worker &nbsp;·&nbsp; /var/run/docker.sock</span>
+    <span class="arrow">↓</span>
+  </div>
+
+  <!-- SANDBOX CONTAINERS -->
+  <div class="layer layer-sandbox">
+    <div class="layer-label">④ Dynamic Sandbox Containers (spawned at runtime)</div>
+    <div class="boxes">
+      <div class="box box-container">
+        <div class="box-name">repl-&lt;projectId&gt;</div>
+        <div class="box-port">random host port → :3000</div>
+        <div class="box-desc">Image: mini-replit-node<br>Based on nixos/nix<br>Runs user's node index.js<br>One container per project</div>
+        <span class="tag tag-docker">mini-replit-node</span>
+      </div>
+      <div class="box box-docker">
+        <div class="box-name">Docker Host</div>
+        <div class="box-port">/var/run/docker.sock</div>
+        <div class="box-desc">sandbox-worker and execution-service communicate with Docker daemon directly via socket to spawn / exec into containers</div>
+        <span class="tag tag-sock">Unix Socket</span>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">📦 Volume Mount Chain</div>
+      Host: <strong>./workspaces/</strong><br>
+      &nbsp;&nbsp;&nbsp;↳ project-service mounts → <strong>/workspaces</strong> (writes scaffold files)<br>
+      &nbsp;&nbsp;&nbsp;↳ sandbox-worker mounts → <strong>/workspaces</strong> (reads project files)<br>
+      &nbsp;&nbsp;&nbsp;↳ repl-&lt;id&gt; uses <strong>--volumes-from sandbox-worker</strong> → gets <strong>/workspaces/&lt;id&gt;</strong> as <strong>/workspace</strong><br>
+      &nbsp;&nbsp;&nbsp;↳ execution-service uses <strong>container.exec()</strong> → opens <strong>/bin/sh</strong> inside repl-&lt;id&gt;
+    </div>
+
+    <div class="callout" style="margin-top:12px; border-color:#1e3a5f; background:#0a1628; color:#93c5fd;">
+      <div class="callout-title" style="color:#60a5fa;">🤔 Why --volumes-from sandbox-worker?</div>
+
+      <strong style="color:#e2e8f0;">The Problem:</strong> sandbox-worker spawns containers by calling the <em>host Docker daemon</em> via
+      <code>/var/run/docker.sock</code>. When it runs:<br><br>
+      &nbsp;&nbsp;&nbsp;<code>docker run -v /workspaces/&lt;id&gt;:/workspace mini-replit-node</code><br><br>
+      The path <code>/workspaces/&lt;id&gt;</code> is a path <em>inside the sandbox-worker container</em> — but Docker resolves
+      volume paths on the <strong>host machine</strong>, not inside the container. So the host has no idea what
+      <code>/workspaces/&lt;id&gt;</code> means and the mount silently fails or errors.<br><br>
+
+      <strong style="color:#e2e8f0;">On Windows it gets worse:</strong> the real host path is something like<br>
+      &nbsp;&nbsp;&nbsp;<code>D:/coding/development/Web Development/100x/.../workspaces/&lt;id&gt;</code><br>
+      The spaces in the path break shell commands, and Linux containers don't understand Windows drive letters at all.<br><br>
+
+      <strong style="color:#e2e8f0;">The Fix — <code>--volumes-from sandbox-worker</code>:</strong><br>
+      Instead of specifying a path, we tell Docker: <em>"give this new container the exact same volume mounts
+      that sandbox-worker already has."</em> Since Docker Compose already resolved <code>./workspaces → /workspaces</code>
+      correctly when it started sandbox-worker, the new container inherits that binding without us ever
+      needing to know or pass the host path. This works on Windows, Mac, and Linux with zero changes.<br><br>
+
+      <strong style="color:#e2e8f0;">Why <code>container_name: sandbox-worker</code> is required:</strong><br>
+      <code>--volumes-from</code> needs a <em>stable container name</em> to reference. Without it, Docker Compose
+      generates a random name like <code>replit-sandbox-worker-1</code> which could change on restart.
+      Setting <code>container_name: sandbox-worker</code> guarantees the name is always predictable.
+    </div>
+  </div>
+
+</div>
+
+<!-- STEP BY STEP FLOW -->
+<div class="flow-steps">
+  <h2>Request Flow — End to End</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-title">Register / Login</div>
+      <div class="step-desc">Client POSTs to auth-service :3001. Gets JWT back.</div>
+      <span class="step-badge tag-rest" style="background:#4f46e520;color:#818cf8;border:1px solid #4f46e540">POST /login</span>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-title">Create Project</div>
+      <div class="step-desc">project-service scaffolds files into /workspaces/&lt;uuid&gt; and saves to DB.</div>
+      <span class="step-badge tag-rest" style="background:#0ea5e920;color:#38bdf8;border:1px solid #0ea5e940">POST /create</span>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-title">Trigger Run</div>
+      <div class="step-desc">execution-service receives POST /run/:id and pushes projectId to RabbitMQ.</div>
+      <span class="step-badge tag-amqp" style="background:#f9731620;color:#fb923c;border:1px solid #f9731640">AMQP queue</span>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-title">Spawn Container</div>
+      <div class="step-desc">sandbox-worker consumes message, runs docker run --volumes-from to start mini-replit-node.</div>
+      <span class="step-badge tag-docker" style="background:#22c55e20;color:#4ade80;border:1px solid #22c55e40">docker run</span>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-title">Open Terminal</div>
+      <div class="step-desc">Client connects via WebSocket to :4000 with JWT + containerId.</div>
+      <span class="step-badge tag-ws" style="background:#f59e0b20;color:#fbbf24;border:1px solid #f59e0b40">WS :4000</span>
+    </div>
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-title">Shell Access</div>
+      <div class="step-desc">execution-service calls container.exec() with Tty:true, /bin/sh. Commands stream bidirectionally.</div>
+      <span class="step-badge tag-sock" style="background:#6b728020;color:#9ca3af;border:1px solid #6b728040">exec /bin/sh</span>
+    </div>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="diagram">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#4f46e5"></div> auth-service</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0ea5e9"></div> project-service / postgres</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> execution-service</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> sandbox-worker</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div> rabbitmq</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> sandbox containers</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div> docker host / socket</div>
+  </div>
+</div>
+
+</body>
+</html>
